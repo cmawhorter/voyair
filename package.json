@@ -1,16 +1,14 @@
 {
-  "name": "cuckold",
+  "name": "voyeur",
   "version": "0.0.1",
   "description": "",
-  "main": "cuckold.js",
+  "main": "voyeur.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "async": "^0.9.0",
-    "gaze": "^0.6.4",
-    "sse4_crc32": "^2.1.2"
+    "chokidar": "^1.0.0-rc3"
   }
 }
