@@ -4,7 +4,6 @@ Voyeur.prototype.shutdownSync = function() {
 };
 
 var fs = require('fs')
-  , path = require('path')
   , EventEmitter = require('events').EventEmitter;
 
 var chokidar = require('chokidar');
