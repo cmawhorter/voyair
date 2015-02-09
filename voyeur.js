@@ -17,12 +17,21 @@ var consolelogger = {
   , log: console.log
 };
 
+var nooplogger = {
+    info: function(){}
+  , warn: function(){}
+  , error: function(){}
+  , debug: function(){}
+  , log: function(){}
+};
+
 function Voyeur(opts) {
   opts = opts || {};
   this.options = {
       destination: './watched.json'
     , prettify: true
     , saveEvery: 360000
+    , logger: nooplogger
   };
   for (var k in opts) {
     if (k in this.options) {
@@ -36,7 +45,7 @@ function Voyeur(opts) {
   this.db = {};
   this.watchers = [];
 
-  this.log = consolelogger;
+  this.log = this.options.logger;
   this.log.debug('Initializing', this.options);
 }
 
