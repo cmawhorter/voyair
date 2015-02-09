@@ -3,22 +3,6 @@ var fs = require('fs')
 
 var chokidar = require('chokidar');
 
-var consolelogger = {
-    info: console.info
-  , warn: console.warn
-  , error: console.error
-  , debug: console.log
-  , log: console.log
-};
-
-var nooplogger = {
-    info: function(){}
-  , warn: function(){}
-  , error: function(){}
-  , debug: function(){}
-  , log: function(){}
-};
-
 function Voyeur(opts) {
   opts = opts || {};
   this.options = {
@@ -251,17 +235,20 @@ Voyeur.prototype.saveSync = function(destination) {
   fs.writeFileSync(destination, this.stringify());
 };
 
-Voyeur.filesToObjects = function(files) {
-  files = files || [];
-  var db = {};
-  for (var i=0; i < files.length; i++) {
-    var relativePath = files[i];
-    db[relativePath] = {
-        revision: null
-      , data: null
-    };
-  }
-  return db;
+var consolelogger = {
+    info: console.info
+  , warn: console.warn
+  , error: console.error
+  , debug: console.log
+  , log: console.log
+};
+
+var nooplogger = {
+    info: function(){}
+  , warn: function(){}
+  , error: function(){}
+  , debug: function(){}
+  , log: function(){}
 };
 
 module.exports = Voyeur;
