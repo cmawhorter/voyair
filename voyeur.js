@@ -1,8 +1,3 @@
-Voyeur.prototype.shutdownSync = function() {
-  this.saveSync();
-  this.stopSync();
-};
-
 var fs = require('fs')
   , EventEmitter = require('events').EventEmitter;
 
