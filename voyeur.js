@@ -3,6 +3,14 @@ var fs = require('fs')
 
 var chokidar = require('chokidar');
 
+// TODO: wrap all db items in an object instead of direct access to data
+// TODO: tweak expired... separating it out from create like this basically leads to dupe of code.  once for create, and once to re-build.  maybe instead of adding data, Item object could take a function that handles parsing and automatically run whenever it expires.  this way data can auto be rebuilt
+// TODO: if that above is implemented, add an option serveExpired: true/false.  this way if an item is expired, expired data won't be served.
+// TODO: create get/getSync so that if an item is expired and a get is requested, it won't return invalid data, but will instead wait for the data to be recreated (with optional timeout)
+// TODO: calling the Item.rebuild function should be in some kind of queue so that they're throttled based on some sort of concurrency.  outside scope, include an example using async.queue that achieves this goal
+// TODO: expose loggers or change to [string|fn]
+// TODO: create general emit for all .emit calls, so that they all get wrapped in a setImmediate just in case
+
 function Voyeur(opts) {
   opts = opts || {};
   this.options = {
@@ -29,16 +37,19 @@ function Voyeur(opts) {
 
 Voyeur.prototype = Object.create(EventEmitter.prototype);
 
-Voyeur.prototype.start = function(pattern, options, callback) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = null;
-  }
+Voyeur.prototype._error = function(err) {
+  this.emit('error', err);
+};
 
+Voyeur.prototype.start = function(pattern, options) {
   var _this = this
     , ready = function(err) {
-        _this.emit('ready');
-        callback(err);
+        if (err) {
+          return _this._error(err);
+        }
+        process.setImmediate(function() {
+          _this.emit('ready')
+        });
       };
 
   Object.freeze(_this.options);
@@ -48,7 +59,7 @@ Voyeur.prototype.start = function(pattern, options, callback) {
     if (exists) {
       _this._load(_this.options.destination, function(err) {
         if (err) {
-          return callback(err);
+          return _this._error(err);
         }
         _this._watch(pattern, options, ready);
         return;
@@ -64,7 +75,7 @@ Voyeur.prototype.start = function(pattern, options, callback) {
     setInterval(function() {
       _this.save(function(err) {
         if (err) {
-          throw err;
+          return _this._error(err);
         }
       });
     }, _this.options.saveEvery);
@@ -185,7 +196,7 @@ Voyeur.prototype.add = function(relativePath, revision, data) {
     this.emit('create', relativePath, createData);
   }
   else {
-    var item = this.get(relativePath)
+    var item = this.get(relativePath);
     this.emit(false === 'status' ? 'current' : 'expired', relativePath, item.data, function acknowledge() {
       if (arguments.length > 0) {
         throw new Error('Acknowledge callback expected zero arguments, received ' + arguments.length);
