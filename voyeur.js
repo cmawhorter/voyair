@@ -3,21 +3,27 @@ var fs = require('fs')
 
 var chokidar = require('chokidar');
 
-// TODO: wrap all db items in an object instead of direct access to data
-// TODO: tweak expired... separating it out from create like this basically leads to dupe of code.  once for create, and once to re-build.  maybe instead of adding data, Item object could take a function that handles parsing and automatically run whenever it expires.  this way data can auto be rebuilt
-// TODO: if that above is implemented, add an option serveExpired: true/false.  this way if an item is expired, expired data won't be served.
-// TODO: create get/getSync so that if an item is expired and a get is requested, it won't return invalid data, but will instead wait for the data to be recreated (with optional timeout)
-// TODO: calling the Item.rebuild function should be in some kind of queue so that they're throttled based on some sort of concurrency.  outside scope, include an example using async.queue that achieves this goal
-// TODO: expose loggers or change to [string|fn]
-// TODO: create general emit for all .emit calls, so that they all get wrapped in a setImmediate just in case
+var Item = require('./lib/item.js');
+
+// TODO: adding/removing dirs
+// TODO: confirm storing complex data works (no reason to believe it doesn't)
+// TODO: confirm providers work as expected
 
 function Voyeur(opts) {
   opts = opts || {};
   this.options = {
-      destination: './watched.json'
-    , prettify: true
+      saveDestination: './watched.json'
+    , savePretty: true
     , saveEvery: 360000
-    , logger: nooplogger
+
+    , autoProvide: true
+    , defaultProvider: null
+    , providerTimeout: 5000
+    , providerTimeoutOutcome: 'warn'
+
+    , returnExpired: true
+    , defaultRevision: -Infinity
+    , logger: null
   };
   for (var k in opts) {
     if (k in this.options) {
@@ -28,17 +34,29 @@ function Voyeur(opts) {
     }
   }
 
-  this.db = {};
-  this.watchers = [];
+  if (!Item.isValidProvider(this.options.defaultProvider)) {
+    throw new Error('Invalid defaultProvider. Must be null or a function that takes exactly one argument (a callback): ' + toString.call(this.options.defaultProvider) + ' provided');
+  }
 
-  this.log = this.options.logger;
+  this._db = {};
+  this._watchers = [];
+
+  this.log = this.options.logger || nooplogger;
   this.log.debug('Initializing', this.options);
 }
 
 Voyeur.prototype = Object.create(EventEmitter.prototype);
 
 Voyeur.prototype._error = function(err) {
-  this.emit('error', err);
+  this.trigger('error', err);
+};
+
+Voyeur.prototype.trigger = function() {
+  var _this = this
+    , args = arguments;
+  setImmediate(function() {
+    _this.emit.apply(_this, args);
+  });
 };
 
 Voyeur.prototype.start = function(pattern, options) {
@@ -47,17 +65,15 @@ Voyeur.prototype.start = function(pattern, options) {
         if (err) {
           return _this._error(err);
         }
-        process.setImmediate(function() {
-          _this.emit('ready')
-        });
+        _this.trigger('ready');
       };
 
   Object.freeze(_this.options);
   this.log.debug('Starting');
 
-  fs.exists(_this.options.destination, function(exists) {
+  fs.exists(_this.options.saveDestination, function(exists) {
     if (exists) {
-      _this._load(_this.options.destination, function(err) {
+      _this._load(_this.options.saveDestination, function(err) {
         if (err) {
           return _this._error(err);
         }
@@ -101,11 +117,11 @@ Voyeur.prototype.shutdown = function(callback) {
 
 Voyeur.prototype.stop = function(callback) {
   this.stopSync();
-  process.setImmediate(callback);
+  setImmediate(callback);
 };
 
 Voyeur.prototype.stopSync = function() {
-  this.watchers.forEach(function(watcher) {
+  this._watchers.forEach(function(watcher) {
     watcher.close();
   });
 };
@@ -120,13 +136,27 @@ Voyeur.prototype._load = function(destination, callback) {
       return callback(err);
     }
     _this.import(JSON.parse(data));
-    _this.emit('reload');
+    _this.trigger('reload');
     callback(null);
   });
 };
 
-Voyeur.prototype._lastModFromStats = function(stats) {
-  return stats && stats.mtime && stats.mtime.getTime ? stats.mtime.getTime() : null;
+// on osx 10.10.2 (at least) stats is unavailable from watcher:add event
+// wrapping in setImmediate seems to fix, but should this poll? FIXME: ?
+Voyeur.prototype._lastModFromStats = function(filepath, stats, callback) {
+  setImmediate(function() {
+    if (stats && stats.mtime && stats.mtime.getTime) {
+      callback(null, stats.mtime.getTime());
+    }
+    else {
+      fs.stat(filepath, function(err, stats) {
+        if (err) {
+          return callback(err);
+        }
+        callback(null, stats.mtime.getTime());
+      });
+    }
+  });
 };
 
 Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
@@ -135,7 +165,7 @@ Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
   _this.log.debug('Watching', globPattern, globOptions);
 
   var watcher = chokidar.watch(globPattern, globOptions);
-  _this.watchers.push(watcher);
+  _this._watchers.push(watcher);
 
   var ready = false;
   watcher
@@ -149,27 +179,39 @@ Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
       callback(err);
     })
     .on('add', function(filepath, stats) {
-      _this.emit('watcher:add', filepath, stats, watcher);
-      var lastMod = _this._lastModFromStats(stats);
-      if (ready || !_this.test(filepath, lastMod)) {
-        _this.add(filepath, lastMod);
-      }
+      _this.trigger('watcher:add', filepath, stats, watcher);
+      _this._lastModFromStats(filepath, stats, function(err, lastMod) {
+        if (err) {
+          return _this._error(err);
+        }
+        if (ready || !_this.test(filepath, lastMod)) {
+          _this.add(filepath, lastMod);
+        }
+      });
     })
     .on('change', function(filepath, stats) {
-      _this.emit('watcher:change', filepath, stats, watcher);
-      _this.add(filepath, _this._lastModFromStats(stats));
+      _this.trigger('watcher:change', filepath, stats, watcher);
+      _this._lastModFromStats(filepath, stats, function(err, lastMod) {
+        if (err) {
+          return _this._error(err);
+        }
+        _this.add(filepath, lastMod);
+      });
     })
     .on('unlink', function(filepath) {
-      _this.emit('watcher:delete', filepath, watcher);
+      _this.trigger('watcher:delete', filepath, watcher);
       _this.remove(filepath);
     });
 };
 
 Voyeur.prototype.import = function(db) {
   for (var relativePath in db) {
-    var item = db[relativePath];
-    if (item) {
-      this._create(relativePath, item.revision, item.data || {});
+    var obj = db[relativePath];
+    if (obj) {
+      var item = this._create(relativePath, obj.revision, obj.data || {});
+      if (obj.expired) {
+        item.expired = true;
+      }
     }
   }
   return this;
@@ -179,52 +221,76 @@ Voyeur.prototype._create = function(relativePath, revision, data) {
   if (!data) {
     throw new Error('Data is required');
   }
-  this.db[relativePath] = { revision: revision, data: data };
+  var item = this._db[relativePath] = new Item(relativePath, revision || this.options.defaultRevision, data);
+  if (!Item.isValidProvider(data) && this.options.defaultProvider) {
+    item.provider = this.options.defaultProvider;
+  }
+  return item;
+};
+
+Voyeur.prototype._get = function(relativePath) {
+  return this._db[relativePath];
 };
 
 Voyeur.prototype.get = function(relativePath) {
-  return this.db[relativePath];
+  var item = this._get(relativePath);
+  return !item.expired || (item.expired && this.options.returnExpired) ? item : null;
 };
 
 Voyeur.prototype.add = function(relativePath, revision, data) {
-  // this.log.debug('add', relativePath, revision);
-  revision = revision || -Infinity;
-  var status = this.test(relativePath, revision);
-  if (void 0 === status) {
-    var createData = {};
-    this._create(relativePath, revision, createData);
-    this.emit('create', relativePath, createData);
+  revision = revision || this.options.defaultRevision;
+  if (!this._db[relativePath]) { // doesn't exist
+    this.trigger('item:created', this._create(relativePath, revision, data || {}));
   }
   else {
-    var item = this.get(relativePath);
-    this.emit(false === 'status' ? 'current' : 'expired', relativePath, item.data, function acknowledge() {
-      if (arguments.length > 0) {
-        throw new Error('Acknowledge callback expected zero arguments, received ' + arguments.length);
-      }
-      item.revision = revision;
-    });
+    this.update(relativePath, revision, data);
   }
   return this;
+};
+
+Voyeur.prototype.update = function(relativePath, revision, data) {
+  revision = revision || this.options.defaultRevision;
+  var status = this.test(relativePath, revision)
+    , item = this._get(relativePath);
+  if (true === status) {
+    this.trigger('item:current', item);
+  }
+  else if (false === status) {
+    var acknowledge = function acknowledgeItemExpired() {
+      item.revision = revision;
+      item.expired = false;
+    };
+    item.expired = true;
+    this.trigger('item:expired', item, acknowledge);
+    if (item.provider && this.options.autoProvide) {
+      this._provide(item, acknowledge);
+    }
+  }
+  else {
+    throw new Error('Cannot update because "' + relativePath + '" does not exist');
+  }
 };
 
 Voyeur.prototype.remove = function(relativePath) {
   // this.log.debug('remove', relativePath);
-  if (this.db[relativePath]) {
-    this.emit('remove', relativePath, this.db[relativePath].data);
-    delete this.db[relativePath];
+  if (this._db[relativePath]) {
+    this.trigger('item:removed', this._get(relativePath));
+    delete this._db[relativePath];
   }
   return this;
 };
 
+Voyeur.prototype._provide = function(item, callback) {
+  item.callProvider(callback, {
+    timeout: this.options.providerTimeout,
+    timeoutOutcome: this.options.providerTimeoutOutcome
+  });
+};
+
 Voyeur.prototype.test = function(relativePath, revision) {
-  revision = revision || -Infinity;
-  if (this.db[relativePath]) { // already exists
-    if (revision > (this.db[relativePath].revision || -Infinity)) { // newer version
-      return false;
-    }
-    else {
-      return true;
-    }
+  revision = revision || this.options.defaultRevision;
+  if (this._db[relativePath]) {
+    return revision == this._db[relativePath].revision;
   }
   else {
     return;
@@ -232,21 +298,25 @@ Voyeur.prototype.test = function(relativePath, revision) {
 };
 
 Voyeur.prototype.stringify = function() {
-  return this.options.prettify ? JSON.stringify(this.db, null, 2) : JSON.stringify(this.db);
+  return this.options.saveDestination ? JSON.stringify(this._db, null, 2) : JSON.stringify(this._db);
 };
 
 Voyeur.prototype.save = function(destination, callback) {
-  destination = destination || this.options.destination;
+  if (typeof destination === 'function') {
+    callback = destination;
+    destination = null;
+  }
+  destination = destination || this.options.saveDestination;
   fs.writeFile(destination, this.stringify(), callback);
 };
 
 Voyeur.prototype.saveSync = function(destination) {
-  destination = destination || this.options.destination;
+  destination = destination || this.options.saveDestination;
   this.log.debug('saveSync', destination);
   fs.writeFileSync(destination, this.stringify());
 };
 
-var consolelogger = {
+Voyeur.consoleLogger = {
     info: console.info
   , warn: console.warn
   , error: console.error
