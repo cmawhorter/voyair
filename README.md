@@ -15,10 +15,10 @@ voyeur.start('./**/*.html');
 voyeur.on('item:created', function(item) {
   // assume item.path = some/path/to.html
   var html = fs.readFileSync(item.path).toString()
-    , m = html.match(/&lt;title&gt;/);
+    , m = html.match(/<title>/);
   if (m) {
     item.data('title', m[0]);
-    console.log(item.data('title')); // &lt;title&gt;
+    console.log(item.data('title')); // <title>
   }
 });
 
@@ -31,7 +31,7 @@ process.exit();
 
 voyeur.on('ready', function() {
   var item = voyeur.get('some/path/to.html'); // our file from above
-  console.log(item.data('title')); // &lt;title&gt;
+  console.log(item.data('title')); // <title>
 });
 
 ```
