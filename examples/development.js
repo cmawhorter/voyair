@@ -15,6 +15,7 @@ var voyeur = new Voyeur({ logger: Voyeur.consoleLogger }).start('./**/*', { igno
 });
 
 [
+  'item:imported',
   'item:created',
   'item:current',
   'item:expired',

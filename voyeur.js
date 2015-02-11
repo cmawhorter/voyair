@@ -212,6 +212,7 @@ Voyeur.prototype.import = function(db) {
       if (obj.expired) {
         item.expired = true;
       }
+      this.trigger('item:imported', item);
     }
   }
   return this;
