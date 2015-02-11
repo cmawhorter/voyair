@@ -35,3 +35,7 @@ voyeur.on('ready', function() {
 });
 
 ```
+
+## Serializing/Unserializing 
+
+If the data you're storing needs some sort of serialization before being converted to json, be sure to add a `toJSON` method to your objects.  To unserialze data from json, an `item:imported` event is called for each item being loaded from disk.

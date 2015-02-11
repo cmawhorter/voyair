@@ -208,7 +208,7 @@ Voyeur.prototype.import = function(db) {
   for (var relativePath in db) {
     var obj = db[relativePath];
     if (obj) {
-      var item = this._create(relativePath, obj.revision, obj.data || {});
+      var item = this._create(relativePath, obj.revision, obj.data, false);
       if (obj.expired) {
         item.expired = true;
       }
@@ -218,13 +218,13 @@ Voyeur.prototype.import = function(db) {
   return this;
 };
 
-Voyeur.prototype._create = function(relativePath, revision, data) {
-  if (!data) {
-    throw new Error('Data is required');
-  }
+Voyeur.prototype._create = function(relativePath, revision, data, providerFallback) {
   var item = this._db[relativePath] = new Item(relativePath, revision || this.options.defaultRevision, data);
   if (!Item.isValidProvider(data) && this.options.defaultProvider) {
     item.provider = this.options.defaultProvider;
+  }
+  if (!data && providerFallback && item.provider && this.options.autoProvide) { // if creating and no data is provided
+    this._provide(item);
   }
   return item;
 };
@@ -241,7 +241,7 @@ Voyeur.prototype.get = function(relativePath) {
 Voyeur.prototype.add = function(relativePath, revision, data) {
   revision = revision || this.options.defaultRevision;
   if (!this._db[relativePath]) { // doesn't exist
-    this.trigger('item:created', this._create(relativePath, revision, data || {}));
+    this.trigger('item:created', this._create(relativePath, revision, data, true));
   }
   else {
     this.update(relativePath, revision, data);
@@ -282,10 +282,16 @@ Voyeur.prototype.remove = function(relativePath) {
 };
 
 Voyeur.prototype._provide = function(item, callback) {
-  item.callProvider(callback, {
-    timeout: this.options.providerTimeout,
-    timeoutOutcome: this.options.providerTimeoutOutcome
-  });
+  var _this = this;
+  callback = callback || function(err){
+    if (err) {
+      return _this._error(err);
+    }
+  };
+  item.callProvider({
+    timeout: _this.options.providerTimeout,
+    timeoutOutcome: _this.options.providerTimeoutOutcome
+  }, callback);
 };
 
 Voyeur.prototype.test = function(relativePath, revision) {
