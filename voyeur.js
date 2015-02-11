@@ -8,6 +8,7 @@ var Item = require('./lib/item.js');
 // TODO: adding/removing dirs
 // TODO: confirm storing complex data works (no reason to believe it doesn't)
 // TODO: confirm providers work as expected
+// TODO: provider calls are async, which can lead to ready being called before all providers have returned.  option to prevent this from happening?
 
 function Voyeur(opts) {
   opts = opts || {};
@@ -59,14 +60,9 @@ Voyeur.prototype.trigger = function() {
   });
 };
 
-Voyeur.prototype.start = function(pattern, options) {
-  var _this = this
-    , ready = function(err) {
-        if (err) {
-          return _this._error(err);
-        }
-        _this.trigger('ready');
-      };
+Voyeur.prototype.start = function(pattern, options, callback) {
+  var _this = this;
+  callback = callback || function(err) { if (err) { _this._error(err); } };
 
   Object.freeze(_this.options);
   this.log.debug('Starting');
@@ -77,12 +73,12 @@ Voyeur.prototype.start = function(pattern, options) {
         if (err) {
           return _this._error(err);
         }
-        _this._watch(pattern, options, ready);
+        _this._watch(pattern, options, callback);
         return;
       });
     }
     else {
-      _this._watch(pattern, options, ready);
+      _this._watch(pattern, options, callback);
       return;
     }
   });
@@ -136,7 +132,6 @@ Voyeur.prototype._load = function(destination, callback) {
       return callback(err);
     }
     _this.import(JSON.parse(data));
-    _this.trigger('reload');
     callback(null);
   });
 };
@@ -227,6 +222,10 @@ Voyeur.prototype._create = function(relativePath, revision, data, providerFallba
     this._provide(item);
   }
   return item;
+};
+
+Voyeur.prototype.all = function() {
+  return Object.create(this._db);
 };
 
 Voyeur.prototype._get = function(relativePath) {

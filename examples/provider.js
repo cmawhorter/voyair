@@ -16,16 +16,9 @@ var voyeur = new Voyeur({
     });
   },
   logger: Voyeur.consoleLogger
-}).start('./**/*', { ignored: '**/node_modules/**' });
-
-[
-  'ready',
-  'reload',
-].forEach(function(evt) {
-  console.log('\t-> Added event %s', evt);
-  voyeur.on(evt, function() {
-    console.log('Event (%s)', evt);
-  });
+}).start('./**/*', { ignored: '**/node_modules/**' }, function(err) {
+  if (err) throw err;
+  console.log('Voyeur initialization complete');
 });
 
 [
