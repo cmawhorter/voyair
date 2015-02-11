@@ -35,7 +35,7 @@ function Voyeur(opts) {
   }
 
   if (!Item.isValidProvider(this.options.defaultProvider)) {
-    throw new Error('Invalid defaultProvider. Must be null or a function that takes exactly one argument (a callback): ' + toString.call(this.options.defaultProvider) + ' provided');
+    throw new Error('Invalid defaultProvider. Must be null or a function that takes two arguments fn(item, callback): ' + toString.call(this.options.defaultProvider) + ' provided');
   }
 
   this._db = {};
