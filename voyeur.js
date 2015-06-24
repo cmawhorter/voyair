@@ -156,47 +156,50 @@ Voyeur.prototype._lastModFromStats = function(filepath, stats, callback) {
 
 Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
   var _this = this;
+  var ready = false;
 
   _this.log.debug('Watching', globPattern, globOptions);
 
   var watcher = chokidar.watch(globPattern, globOptions);
   _this._watchers.push(watcher);
 
-  var ready = false;
-  watcher
-    .on('ready', function() {
-      _this.log.debug('Watcher ready');
-      ready = true;
-      callback(null);
-    })
-    .on('error', function(err) {
-      watcher.close();
-      callback(err);
-    })
-    .on('add', function(filepath, stats) {
-      _this.trigger('watcher:add', filepath, stats, watcher);
-      _this._lastModFromStats(filepath, stats, function(err, lastMod) {
-        if (err) {
-          return _this._error(err);
-        }
-        if (ready || !_this.test(filepath, lastMod)) {
-          _this.add(filepath, lastMod);
-        }
-      });
-    })
-    .on('change', function(filepath, stats) {
-      _this.trigger('watcher:change', filepath, stats, watcher);
-      _this._lastModFromStats(filepath, stats, function(err, lastMod) {
-        if (err) {
-          return _this._error(err);
-        }
+  watcher.on('ready', function() {
+    _this.log.debug('Watcher ready');
+    ready = true;
+    callback(null);
+  });
+
+  watcher.on('error', function(err) {
+    watcher.close();
+    callback(err);
+  });
+
+  watcher.on('add', function(filepath, stats) {
+    _this.trigger('watcher:add', filepath, stats, watcher);
+    _this._lastModFromStats(filepath, stats, function(err, lastMod) {
+      if (err) {
+        return _this._error(err);
+      }
+      if (ready || !_this.test(filepath, lastMod)) {
         _this.add(filepath, lastMod);
-      });
-    })
-    .on('unlink', function(filepath) {
-      _this.trigger('watcher:delete', filepath, watcher);
-      _this.remove(filepath);
+      }
     });
+  });
+
+  watcher.on('change', function(filepath, stats) {
+    _this.trigger('watcher:change', filepath, stats, watcher);
+    _this._lastModFromStats(filepath, stats, function(err, lastMod) {
+      if (err) {
+        return _this._error(err);
+      }
+      _this.add(filepath, lastMod);
+    });
+  });
+
+  watcher.on('unlink', function(filepath) {
+    _this.trigger('watcher:delete', filepath, watcher);
+    _this.remove(filepath);
+  });
 };
 
 Voyeur.prototype.import = function(db) {
