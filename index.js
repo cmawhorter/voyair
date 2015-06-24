@@ -13,7 +13,7 @@ var Item = require('./lib/item.js');
 // TODO: confirm providers work as expected
 // TODO: provider calls are async, which can lead to ready being called before all providers have returned.  option to prevent this from happening?
 
-function Voyeur(opts) {
+function Voyair(opts) {
   events.EventEmitter.call(this);
 
   opts = opts || {};
@@ -51,13 +51,13 @@ function Voyeur(opts) {
   this.log.debug('Initializing', this.options);
 }
 
-util.inherits(Voyeur, events.EventEmitter);
+util.inherits(Voyair, events.EventEmitter);
 
-Voyeur.prototype._error = function(err) {
+Voyair.prototype._error = function(err) {
   this.trigger('error', err);
 };
 
-Voyeur.prototype.trigger = function() {
+Voyair.prototype.trigger = function() {
   var _this = this
     , args = arguments;
   process.nextTick(function() {
@@ -65,7 +65,7 @@ Voyeur.prototype.trigger = function() {
   });
 };
 
-Voyeur.prototype.start = function(pattern, options, callback) {
+Voyair.prototype.start = function(pattern, options, callback) {
   var _this = this;
   callback = callback || function(err) { if (err) { _this._error(err); } };
 
@@ -103,12 +103,12 @@ Voyeur.prototype.start = function(pattern, options, callback) {
   return _this;
 };
 
-Voyeur.prototype.shutdownSync = function() {
+Voyair.prototype.shutdownSync = function() {
   this.saveSync();
   this.stopSync();
 };
 
-Voyeur.prototype.shutdown = function(callback) {
+Voyair.prototype.shutdown = function(callback) {
   var _this = this;
   _this.stop(function(err) {
     if (err) {
@@ -118,18 +118,18 @@ Voyeur.prototype.shutdown = function(callback) {
   });
 };
 
-Voyeur.prototype.stop = function(callback) {
+Voyair.prototype.stop = function(callback) {
   this.stopSync();
   process.nextTick(callback);
 };
 
-Voyeur.prototype.stopSync = function() {
+Voyair.prototype.stopSync = function() {
   this._watchers.forEach(function(watcher) {
     watcher.close();
   });
 };
 
-Voyeur.prototype._load = function(destination, callback) {
+Voyair.prototype._load = function(destination, callback) {
   var _this = this;
 
   _this.log.debug('Loading', destination);
@@ -144,7 +144,7 @@ Voyeur.prototype._load = function(destination, callback) {
 };
 
 // on osx 10.10.2 (at least) stats is unavailable from watcher:add event
-Voyeur.prototype._lastModFromStats = function(filepath, stats, callback) {
+Voyair.prototype._lastModFromStats = function(filepath, stats, callback) {
   if (stats && stats.mtime && stats.mtime.getTime) {
     callback(null, stats.mtime.getTime());
   }
@@ -158,7 +158,7 @@ Voyeur.prototype._lastModFromStats = function(filepath, stats, callback) {
   }
 };
 
-Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
+Voyair.prototype._watch = function(globPattern, globOptions, callback) {
   var _this = this;
   var ready = false;
 
@@ -171,6 +171,7 @@ Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
     _this.log.debug('Watcher ready');
     ready = true;
     callback(null);
+    _this.trigger('ready');
   });
 
   watcher.on('error', function(err) {
@@ -206,7 +207,7 @@ Voyeur.prototype._watch = function(globPattern, globOptions, callback) {
   });
 };
 
-Voyeur.prototype.import = function(db) {
+Voyair.prototype.import = function(db) {
   for (var relativePath in db) {
     var obj = db[relativePath];
     if (obj) {
@@ -220,7 +221,7 @@ Voyeur.prototype.import = function(db) {
   return this;
 };
 
-Voyeur.prototype._create = function(relativePath, revision, data, providerFallback) {
+Voyair.prototype._create = function(relativePath, revision, data, providerFallback) {
   var item = this._db[relativePath] = new Item(relativePath, revision || this.options.defaultRevision, data);
   if (!Item.isValidProvider(data) && this.options.defaultProvider) {
     item.provider = this.options.defaultProvider;
@@ -231,20 +232,20 @@ Voyeur.prototype._create = function(relativePath, revision, data, providerFallba
   return item;
 };
 
-Voyeur.prototype.all = function() {
+Voyair.prototype.all = function() {
   return Object.create(this._db);
 };
 
-Voyeur.prototype._get = function(relativePath) {
+Voyair.prototype._get = function(relativePath) {
   return this._db[relativePath];
 };
 
-Voyeur.prototype.get = function(relativePath) {
+Voyair.prototype.get = function(relativePath) {
   var item = this._get(relativePath);
   return !item.expired || (item.expired && this.options.returnExpired) ? item : null;
 };
 
-Voyeur.prototype.add = function(relativePath, revision, data) {
+Voyair.prototype.add = function(relativePath, revision, data) {
   revision = revision || this.options.defaultRevision;
   if (!this._db[relativePath]) { // doesn't exist
     this.trigger('item:created', this._create(relativePath, revision, data, true));
@@ -255,7 +256,7 @@ Voyeur.prototype.add = function(relativePath, revision, data) {
   return this;
 };
 
-Voyeur.prototype.update = function(relativePath, revision, data) {
+Voyair.prototype.update = function(relativePath, revision, data) {
   revision = revision || this.options.defaultRevision;
   var status = this.test(relativePath, revision)
     , item = this._get(relativePath);
@@ -278,7 +279,7 @@ Voyeur.prototype.update = function(relativePath, revision, data) {
   }
 };
 
-Voyeur.prototype.remove = function(relativePath) {
+Voyair.prototype.remove = function(relativePath) {
   // this.log.debug('remove', relativePath);
   if (this._db[relativePath]) {
     this.trigger('item:removed', this._get(relativePath));
@@ -287,7 +288,7 @@ Voyeur.prototype.remove = function(relativePath) {
   return this;
 };
 
-Voyeur.prototype._provide = function(item, callback) {
+Voyair.prototype._provide = function(item, callback) {
   var _this = this;
   callback = callback || function(err){
     if (err) {
@@ -300,7 +301,7 @@ Voyeur.prototype._provide = function(item, callback) {
   }, callback);
 };
 
-Voyeur.prototype.test = function(relativePath, revision) {
+Voyair.prototype.test = function(relativePath, revision) {
   revision = revision || this.options.defaultRevision;
   if (this._db[relativePath]) {
     return revision == this._db[relativePath].revision;
@@ -310,11 +311,11 @@ Voyeur.prototype.test = function(relativePath, revision) {
   }
 };
 
-Voyeur.prototype.stringify = function() {
+Voyair.prototype.stringify = function() {
   return this.options.saveDestination ? JSON.stringify(this._db, null, 2) : JSON.stringify(this._db);
 };
 
-Voyeur.prototype.save = function(destination, callback) {
+Voyair.prototype.save = function(destination, callback) {
   if (typeof destination === 'function') {
     callback = destination;
     destination = null;
@@ -323,13 +324,13 @@ Voyeur.prototype.save = function(destination, callback) {
   fs.writeFile(destination, this.stringify(), callback);
 };
 
-Voyeur.prototype.saveSync = function(destination) {
+Voyair.prototype.saveSync = function(destination) {
   destination = destination || this.options.saveDestination;
   this.log.debug('saveSync', destination);
   fs.writeFileSync(destination, this.stringify());
 };
 
-Voyeur.consoleLogger = {
+Voyair.consoleLogger = {
     info: console.info
   , warn: console.warn
   , error: console.error
@@ -345,4 +346,4 @@ var nooplogger = {
   , log: function(){}
 };
 
-module.exports = Voyeur;
+module.exports = Voyair;

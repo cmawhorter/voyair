@@ -3,25 +3,25 @@
 var assert = require('assert');
 // TODO: implement ramdisk tests
 // var volume = require('./shared/volume.js');
-var Voyeur = require('../voyeur.js');
+var Voyair = require('../index.js');
 
-describe('Voyeur', function() {
+describe('Voyair', function() {
 
   describe('#ctor', function() {
 
     it('should inherit eventemitter', function() {
-      assert.strictEqual(true, new Voyeur() instanceof require('events').EventEmitter);
+      assert.strictEqual(true, new Voyair() instanceof require('events').EventEmitter);
     });
 
     it('should accept options', function() {
       assert.doesNotThrow(function() {
-        assert.strictEqual(false, new Voyeur({ savePretty: false }).options.savePretty);
+        assert.strictEqual(false, new Voyair({ savePretty: false }).options.savePretty);
       });
     });
 
     it('should not accept invalid options', function() {
       assert.throws(function() {
-        new Voyeur({ notSavePretty: false });
+        new Voyair({ notSavePretty: false });
       });
     });
 
@@ -30,12 +30,12 @@ describe('Voyeur', function() {
   describe('#_error', function() {
 
     it('should have a private error helper', function(done) {
-      var voyeur = new Voyeur();
-      voyeur.on('error', function(err) {
+      var voyair = new Voyair();
+      voyair.on('error', function(err) {
         assert.strictEqual(true, err instanceof Error);
         done();
       });
-      voyeur._error(new Error());
+      voyair._error(new Error());
     });
 
   });
@@ -43,25 +43,25 @@ describe('Voyeur', function() {
   describe('#trigger', function() {
 
     it('should have a helper to trigger events', function(done) {
-      var voyeur = new Voyeur();
-      voyeur.on('test', function() {
+      var voyair = new Voyair();
+      voyair.on('test', function() {
         done();
       });
-      voyeur.trigger('test');
+      voyair.trigger('test');
     });
 
     it('should fire on nextTick', function(done) {
-      var voyeur = new Voyeur();
-      voyeur.trigger('test');
-      voyeur.on('test', function() {
+      var voyair = new Voyair();
+      voyair.trigger('test');
+      voyair.on('test', function() {
         done();
       });
     });
 
     it('should pass arguments', function(done) {
-      var voyeur = new Voyeur();
-      voyeur.trigger('test', 'str', 1, false);
-      voyeur.on('test', function(s, n, b) {
+      var voyair = new Voyair();
+      voyair.trigger('test', 'str', 1, false);
+      voyair.on('test', function(s, n, b) {
         assert.strictEqual('str', s);
         assert.strictEqual(1, n);
         assert.strictEqual(false, b);
