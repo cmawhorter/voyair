@@ -72,6 +72,7 @@ Voyeur.prototype.start = function(pattern, options, callback) {
   Object.freeze(_this.options);
   this.log.debug('Starting');
 
+  // TODO: move exist check into load
   fs.exists(_this.options.saveDestination, function(exists) {
     if (exists) {
       _this._load(_this.options.saveDestination, function(err) {
