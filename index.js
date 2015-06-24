@@ -312,7 +312,7 @@ Voyair.prototype.test = function(relativePath, revision) {
 };
 
 Voyair.prototype.stringify = function() {
-  return this.options.saveDestination ? JSON.stringify(this._db, null, 2) : JSON.stringify(this._db);
+  return this.options.savePretty ? JSON.stringify(this._db, null, 2) : JSON.stringify(this._db);
 };
 
 Voyair.prototype.save = function(destination, callback) {
