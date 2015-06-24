@@ -10,10 +10,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "http://github.com/cmawhorter/voyeur.git"
+    "url": "http://github.com/cmawhorter/voyair.git"
   },
   "bugs": {
-    "url": "https://github.com/cmawhorter/voyeur/issues"
+    "url": "https://github.com/cmawhorter/voyair/issues"
   },
   "dependencies": {
     "chokidar": "^1.0.3"
