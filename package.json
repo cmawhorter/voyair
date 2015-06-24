@@ -1,7 +1,7 @@
 {
   "name": "voyair",
-  "version": "0.0.1",
-  "description": "",
+  "version": "0.1.0",
+  "description": "A persistent file processing cache and file watcher",
   "main": "index.js",
   "scripts": {
     "test": "mocha test"
@@ -20,5 +20,13 @@
   },
   "devDependencies": {
     "mocha": "^2.2.5"
-  }
+  },
+  "keywords": [
+    "file",
+    "watching",
+    "cache",
+    "disk",
+    "database",
+    "persistent"
+  ]
 }
