@@ -17,10 +17,127 @@ You want to display a list of contents of the title tags from each file.
 
 You could parse each file to find the `<title>` every time you want to display the list and do some sort of caching to disk or you could let Voyair manage it all for you.
 
-Read the "File Processing Example" section below for commented code that illustrates this example a little bit better.
+Read the "File Processing Example" section at the end of the readme for commented code that illustrates this example a little bit better.
 
 ## Getting Started
 
+Windows untested but in theory it should work if chokidar supports it.
+
+`npm install voyair`
+
+```javascript
+var Voyair = require('voyair');
+var voyair = new Voyair();
+
+// glob (any valid chokidar pattern)
+voyair.start('./path/to/watch/**/*.html');
+
+// process file and store result in item.data(key, value)
+voyair.on('item:created', function(item) {
+  // do work
+});
+
+// our data is ready to use
+voyair.on('ready', function() {
+  var item = voyair.get('path/to/watch/ed/file.html');
+  // use values created in item:created above: item.data(key)
+});
+
+// by default, writes to ./watched.json
+voyair.shutdownSync(); 
+```
+
+## Options
+
+```javascript
+  // default options.  overwrite with new Voyair(options) 
+  // e.g. new Voyair({ saveDestination: './something-else.json' })
+  // nonexistent or misspelled options throw
+  {
+      // this is where the voyeur snapshot/db is read/written
+      // this file also includes the item.data meta data
+      saveDestination: './watched.json'
+
+      // should snapshot be pretty printed or not
+    , savePretty: true
+
+      // Automatically persist snapshot to disk every N milliseconds
+      // Falsey to disable
+    , saveEvery: 360000
+
+      // voyair.get returns entry even if item.expired = true
+    , returnExpired: true
+
+      // If now revision time provided, defaultRevision will be used
+      // Can't think of a reason you'd want to change this but it's here anyway
+    , defaultRevision: -Infinity
+
+      // Logger to use
+      //  - Set to logger: Voyair.consoleLogger to log to console
+      //  - Falsey disables log
+      //  - Any object matching format.  See Loggers below
+    , logger: null
+
+      // PROVIDER OPTIONS
+      // See Providers section below for details on providers
+
+      // Automatically call the provider attached to the file's Item
+    , autoProvide: true
+
+      // A default provider function to assign to all Items
+    , defaultProvider: null
+
+      // How long should provider be given to complete
+    , providerTimeout: 5000
+
+      // What should happen if provider times out
+      // valid options are: 
+      //  - fatal: throws
+      //  - warn: console.warn
+      //  - ignore: noop
+    , providerTimeoutOutcome: 'warn' 
+  };
+```
+
+### Loggers
+
+A console logger is included with Voyair and the source is below.  You could also pass a bunyan instance as the logger option or any other object that matches the format.
+
+```javascript
+Voyair.consoleLogger = {
+    info: console.info
+  , warn: console.warn
+  , error: console.error
+  , debug: console.log
+  , log: console.log
+};
+```
+
+### Providers
+
+In addition to events, Voyair provides a mechanism known as "providers" for dealing with processing files.  
+
+A provider is basically a function that gets called every time a file's meta data needs updating.   It's a little bit like a combination of item:created and item:expired in one, but has some extra functionality with timeouts built on top of it.
+
+In most cases, you'll probably be happier with using providers instead of juggling the `item:*` events.  Either works, though with providers there is a bit more to understand.
+
+
+## Serializing/Unserializing Meta Data
+
+If the meta data you're storing needs some sort of serialization before being converted to json, be sure to add a `toJSON` method to your object.  
+
+To unserialze data from json, an `item:imported` event is called for each item being loaded from disk at which point you can do the unserializing.
+
+## Status / Todo
+
+As far as I know things are pretty complete and working well.  I've been using this with my static site generator [fancy](https://github.com/cmawhorter/fancy) with positive results.
+
+Here's the list of things that could be better:
+
+  - Tests, of course.  There are some minimal tests and a lot of placeholders
+  - confirm adding/removing entire directories works (it seems to)
+  - confirm providers work as expected (they seem to)
+  - Windows testing
 
 
 ## File Processing Example
@@ -99,6 +216,6 @@ voyair.shutdownSync(); // by default, writes to ./watched.json
 process.exit();
 ```
 
-## Serializing/Unserializing 
+## License
 
-If the data you're storing needs some sort of serialization before being converted to json, be sure to add a `toJSON` method to your objects.  To unserialze data from json, an `item:imported` event is called for each item being loaded from disk.
+Copyright (c) 2015 Cory Mawhorter Licensed under the MIT license.
