@@ -1,5 +1,8 @@
+'use strict';
+
 var fs = require('fs')
-  , EventEmitter = require('events').EventEmitter;
+  , util = require('util')
+  , events = require('events');
 
 var chokidar = require('chokidar');
 
@@ -11,6 +14,8 @@ var Item = require('./lib/item.js');
 // TODO: provider calls are async, which can lead to ready being called before all providers have returned.  option to prevent this from happening?
 
 function Voyeur(opts) {
+  events.EventEmitter.call(this);
+
   opts = opts || {};
   this.options = {
       saveDestination: './watched.json'
@@ -46,7 +51,7 @@ function Voyeur(opts) {
   this.log.debug('Initializing', this.options);
 }
 
-Voyeur.prototype = Object.create(EventEmitter.prototype);
+util.inherits(Voyeur, events.EventEmitter);
 
 Voyeur.prototype._error = function(err) {
   this.trigger('error', err);
@@ -55,7 +60,7 @@ Voyeur.prototype._error = function(err) {
 Voyeur.prototype.trigger = function() {
   var _this = this
     , args = arguments;
-  setImmediate(function() {
+  process.nextTick(function() {
     _this.emit.apply(_this, args);
   });
 };
@@ -84,6 +89,7 @@ Voyeur.prototype.start = function(pattern, options, callback) {
   });
 
   if (_this.options.saveEvery) {
+    // FIXME: turn this into setTimeout
     setInterval(function() {
       _this.save(function(err) {
         if (err) {
@@ -113,7 +119,7 @@ Voyeur.prototype.shutdown = function(callback) {
 
 Voyeur.prototype.stop = function(callback) {
   this.stopSync();
-  setImmediate(callback);
+  process.nextTick(callback);
 };
 
 Voyeur.prototype.stopSync = function() {
@@ -137,21 +143,18 @@ Voyeur.prototype._load = function(destination, callback) {
 };
 
 // on osx 10.10.2 (at least) stats is unavailable from watcher:add event
-// wrapping in setImmediate seems to fix, but should this poll? FIXME: ?
 Voyeur.prototype._lastModFromStats = function(filepath, stats, callback) {
-  setImmediate(function() {
-    if (stats && stats.mtime && stats.mtime.getTime) {
+  if (stats && stats.mtime && stats.mtime.getTime) {
+    callback(null, stats.mtime.getTime());
+  }
+  else {
+    fs.stat(filepath, function(err, stats) {
+      if (err) {
+        return callback(err);
+      }
       callback(null, stats.mtime.getTime());
-    }
-    else {
-      fs.stat(filepath, function(err, stats) {
-        if (err) {
-          return callback(err);
-        }
-        callback(null, stats.mtime.getTime());
-      });
-    }
-  });
+    });
+  }
 };
 
 Voyeur.prototype._watch = function(globPattern, globOptions, callback) {

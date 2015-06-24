@@ -1,8 +1,6 @@
 voyeur
 ======
 
-__Currently a work in progress.__
-
 File watching and disk cache designed to persist complex file processing across application runs.
 
 ## Example
