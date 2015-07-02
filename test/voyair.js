@@ -72,7 +72,14 @@ describe('Voyair', function() {
   });
 
   describe('#start', function() {
-    it('should start with optional callback');
+    it('should call optional callback when ready', function(done) {
+      var voyair = new Voyair();
+      voyair.start('./*.*', null, function(err) {
+        assert.ifError(err);
+        done();
+      });
+    });
+
     it('should prevent option changes after starting');
     it('should enable auto save when options.saveEvery enabled');
   });
