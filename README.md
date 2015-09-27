@@ -216,6 +216,16 @@ voyair.shutdownSync(); // by default, writes to ./watched.json
 process.exit();
 ```
 
+## Tests
+
+`mocha test`
+
+A lot are pending.  Higher priority is completing fuzz tester (below).
+
+`mocha test-acid`
+
+TODO: Uses a ramdisk and random operations to fuzz test the library.
+
 ## License
 
 Copyright (c) 2015 Cory Mawhorter Licensed under the MIT license.
