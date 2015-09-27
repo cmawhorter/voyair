@@ -1,10 +1,10 @@
 // watches this library directory for changes
 
-var Voyeur = require('../voyeur.js');
+var Voyair = require('../index.js');
 
-var voyeur = new Voyeur({ logger: Voyeur.consoleLogger }).start('./**/*', { ignored: '**/node_modules/**' }, function(err) {
+var voyair = new Voyair({ logger: Voyair.consoleLogger }).start('./**/*', { ignored: '**/node_modules/**' }, function(err) {
   if (err) throw err;
-  console.log('Voyeur initialization complete');
+  console.log('Voyair initialization complete');
 });
 
 [
@@ -15,7 +15,7 @@ var voyeur = new Voyeur({ logger: Voyeur.consoleLogger }).start('./**/*', { igno
   'item:removed',
 ].forEach(function(evt) {
   console.log('\t-> Added event %s', evt);
-  voyeur.on(evt, function(item) {
+  voyair.on(evt, function(item) {
     console.log('Item Event (%s): %s => %s', evt, item.path, JSON.stringify(item, null, 2));
     if (evt === 'item:expired') {
       var acknowledgeExpiration = arguments[1];
@@ -31,14 +31,14 @@ var voyeur = new Voyeur({ logger: Voyeur.consoleLogger }).start('./**/*', { igno
   'watcher:delete',
 ].forEach(function(evt) {
   console.log('\t-> Added event %s', evt);
-  voyeur.on(evt, function(relativePath, stats) {
+  voyair.on(evt, function(relativePath, stats) {
     console.log('Watcher Event (%s): %s => %j', evt, relativePath, stats && stats.mtime ? stats.mtime : 'unknown last modified time');
   });
 });
 
 if (process.argv[2]) {
   process.on('SIGINT', function() {
-    voyeur.shutdownSync();
+    voyair.shutdownSync();
     process.exit();
   });
 }

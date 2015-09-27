@@ -2,10 +2,10 @@
 
 var fs = require('fs');
 
-var volume = process.env.VOYEUR_TESTING_VOLUME || '/Volumes/VoyeurTestingDisk'
+var volume = process.env.VOYAIR_TESTING_VOLUME || '/Volumes/VoyairTestingDisk'
 
 if (!fs.existsSync(volume)) {
-  console.error('Testing volume "%s" does not exist.  Set env var VOYEUR_TESTING_VOLUME to override.', volume);
+  console.error('Testing volume "%s" does not exist.  Set env var VOYAIR_TESTING_VOLUME to override.', volume);
   process.exit(1);
 }
 

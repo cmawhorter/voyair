@@ -7,7 +7,7 @@ fi
 
 if [ "$1" = "create" ]; then
   # creates a ~500mb ram disk
-  diskutil erasevolume HFS+ 'VoyeurTestingDisk' `hdiutil attach -nomount ram://1024000`
+  diskutil erasevolume HFS+ 'VoyairTestingDisk' `hdiutil attach -nomount ram://1024000`
 fi
 
 if [ "$1" = "destroy" ]; then

@@ -1,6 +1,6 @@
 {
   "name": "voyair",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A persistent file processing cache and file watcher",
   "main": "index.js",
   "scripts": {

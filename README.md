@@ -54,7 +54,7 @@ voyair.shutdownSync();
   // e.g. new Voyair({ saveDestination: './something-else.json' })
   // nonexistent or misspelled options throw
   {
-      // this is where the voyeur snapshot/db is read/written
+      // this is where the voyair snapshot/db is read/written
       // this file also includes the item.data meta data
       saveDestination: './watched.json'
 

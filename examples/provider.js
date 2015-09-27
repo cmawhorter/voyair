@@ -2,9 +2,9 @@
 
 var fs = require('fs');
 
-var Voyeur = require('../voyeur.js');
+var Voyair = require('../index.js');
 
-var voyeur = new Voyeur({
+var voyair = new Voyair({
   defaultProvider: function(item, callback) {
     console.log('defaultProvider', item.path, item.toJSON());
     fs.stat(item.path, function(err, stats) {
@@ -15,10 +15,10 @@ var voyeur = new Voyeur({
       callback(null);
     });
   },
-  logger: Voyeur.consoleLogger
+  logger: Voyair.consoleLogger
 }).start('./**/*', { ignored: '**/node_modules/**' }, function(err) {
   if (err) throw err;
-  console.log('Voyeur initialization complete');
+  console.log('Voyair initialization complete');
 });
 
 [
@@ -29,7 +29,7 @@ var voyeur = new Voyeur({
   'item:removed',
 ].forEach(function(evt) {
   console.log('\t-> Added event %s', evt);
-  voyeur.on(evt, function(item) {
+  voyair.on(evt, function(item) {
     console.log('Item Event (%s): %s => %s', evt, item.path, JSON.stringify(item, null, 2));
   });
 });
@@ -40,14 +40,14 @@ var voyeur = new Voyeur({
   'watcher:delete',
 ].forEach(function(evt) {
   console.log('\t-> Added event %s', evt);
-  voyeur.on(evt, function(relativePath, stats) {
+  voyair.on(evt, function(relativePath, stats) {
     console.log('Watcher Event (%s): %s => %j', evt, relativePath, stats && stats.mtime ? stats.mtime : 'unknown last modified time');
   });
 });
 
 if (process.argv[2]) {
   process.on('SIGINT', function() {
-    voyeur.shutdownSync();
+    voyair.shutdownSync();
     process.exit();
   });
 }
