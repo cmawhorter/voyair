@@ -222,9 +222,15 @@ process.exit();
 
 A lot are pending.  Higher priority is completing fuzz tester (below).
 
-`mocha test-acid`
+```bash
+# TODO: this is still incomplete 
 
-TODO: Uses a ramdisk and random operations to fuzz test the library.
+# Creates a new ramdisk at "VoyairTestingDisk"
+./scripts/ramdisk.sh create
+
+# Runs fuzz testing script with the ramdisk we created above
+node test-acid/fuzz.js /Volumes/VoyairTestingDisk
+```
 
 ## License
 
